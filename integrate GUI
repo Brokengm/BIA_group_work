@@ -536,9 +536,8 @@ class AnalyzePage(QWidget):
         self.setAutoFillBackground(True)
 
         top_label = QLabel(
-            "Please drop one or more eye images for inspection\n"
-            "(This version currently supports selecting a single image "
-            "via the 'Add image' button below.)"
+            "Please select a retinal fundus image for inspection\n"
+            "(This demo uses optic disc segmentation (UNet) + glaucoma classification (EfficientNet)"
         )
         top_label.setAlignment(Qt.AlignCenter)
         top_label.setStyleSheet("color: #555555;")
