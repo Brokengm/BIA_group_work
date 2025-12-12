@@ -2,7 +2,7 @@
 The repository for BIA ICA
 
 
-## Repo Structure
+```markdown
 BIA_group_work/              
 ├── requirements.txt          
 ├── README.md                 # project description
@@ -16,8 +16,10 @@ BIA_group_work/
 ├── trained_models/           
 │   ├── unet_model.pth   
 │   ├── mobilenet_based_model.pth   
-│   └── efficientnet_based_model.pth            
+│   ├── efficientnet_based_model.pth
+│   └── ...         
 │
 └── notebook/                 # train and test process
     ├── train.ipynb
     └── test_segmentation.ipynb
+```
