@@ -537,7 +537,7 @@ class AnalyzePage(QWidget):
 
         top_label = QLabel(
             "Please select a retinal fundus image for inspection\n"
-            "(This demo uses optic disc segmentation (UNet) + glaucoma classification (EfficientNet)"
+            "(This demo uses optic disc segmentation (UNet) + glaucoma classification (EfficientNet).)"
         )
         top_label.setAlignment(Qt.AlignCenter)
         top_label.setStyleSheet("color: #555555;")
