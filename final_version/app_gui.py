@@ -1,6 +1,20 @@
-# app_gui.py
+"""
+GlaucoScan (PyQt5) – glaucoma demo GUI.
 
-# -*- coding: utf-8 -*-
+Run:
+  python app_gui.py
+
+Expected files (relative to this script):
+  - welcome.jpeg
+  - model.py / preprocess.py / glaucoma_detector.py (depending on your pipeline)
+  - GUI/384_unet.pth, GUI/efficientnet.pth (or update paths in your model loader)
+"""
+
+# ---- Global UI constants ----
+APP_TITLE = "GlaucoScan"
+FONT_FAMILY = "Microsoft YaHei"
+
+
 """
 Main application file: UNet optic-disc segmentation + EfficientNet-B3 glaucoma classification + PyQt5 GUI
 """
@@ -12,8 +26,8 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-# ----------------- Part 1: General & DL dependencies -----------------
 import numpy as np
+import math
 from pathlib import Path
 
 from PIL import Image
@@ -21,11 +35,9 @@ from PIL import Image
 import torch
 from torchvision import transforms
 
-# Import model loaders and processing pipeline
 from model import get_unet_model, get_effnet_model, DEVICE
 from preprocess import preprocess_fundus_image
 
-# ----------------- Part 2: PyQt5 GUI dependencies -----------------
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QLabel, QPushButton, QFileDialog,
@@ -36,53 +48,38 @@ from PyQt5.QtGui import QPixmap, QFont, QPalette, QColor
 from PyQt5.QtCore import Qt, pyqtSignal
 
 
-# =======================================================
-# Base paths and constants
-# =======================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Welcome image path for the GUI background
 WELCOME_IMAGE_PATH = os.path.join(BASE_DIR, "welcome.jpeg")
-
-# Classification labels
 CLASS_NAMES = ['Non-Glaucoma', 'Glaucoma']
-# Normalization stats used during training
 NORM_MEAN = [0.485, 0.456, 0.406]
 NORM_STD = [0.229, 0.224, 0.225]
 
 print(f"[INFO] Using device: {DEVICE}")
 
 
-# =======================================================
-# Inference interface
-# =======================================================
 def predict_single_cropped_image_array(img_array: np.ndarray) -> dict:
     """
     Runs the classification model on a pre-processed 384x384 image array.
     """
     model = get_effnet_model() # Get the pre-loaded EfficientNet classifier
 
-    # Define standard classification transforms (ToTensor and Normalize)
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(NORM_MEAN, NORM_STD)
     ])
 
-    # Convert array to tensor and add batch dimension (unsqueeze(0))
     pil_image = Image.fromarray(img_array)
     image_tensor = transform(pil_image).unsqueeze(0).to(DEVICE)
 
     with torch.no_grad():
         outputs = model(image_tensor)
 
-    # Convert logits to probabilities and extract prediction
     probabilities = torch.softmax(outputs, dim=1).cpu().squeeze().numpy()
     predicted_index = int(np.argmax(probabilities))
 
     result = {
         'predicted_class': CLASS_NAMES[predicted_index],
     }
-    # Include both probabilities in the result
     for i, class_name in enumerate(CLASS_NAMES):
         result[f'prob_{class_name}'] = float(probabilities[i])
 
@@ -97,105 +94,155 @@ def glaucoma_predict_pipeline(image_path: str) -> dict:
     if not os.path.exists(image_path):
         return {'error': f"file not found: {image_path}"}
 
-    # 1. Run the segmentation and cropping pipeline
     unet_model = get_unet_model()
     cropped_img = preprocess_fundus_image(image_path, unet_model=unet_model, debug=False)
 
-    # 2. Run the classification on the cropped optic disc
     cls_result = predict_single_cropped_image_array(cropped_img)
     cls_result['filename'] = Path(image_path).name
 
     return cls_result
 
 
-# =======================================================
-# GUI — Welcome page + Analysis page + Main window
-# =======================================================
 class WelcomePage(QWidget):
-    # Signal emitted when the 'Start' button is clicked
     start_clicked = pyqtSignal()
+
+    DESIGN_W = 1440
+    DESIGN_H = 810
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # Load welcome background image
+
+        self._scale = 1.0
+
         self.bg_pixmap = QPixmap()
         if os.path.exists(WELCOME_IMAGE_PATH):
             self.bg_pixmap.load(WELCOME_IMAGE_PATH)
+
         self.init_ui()
 
     def init_ui(self):
-        # UI setup for welcome page
         self.setMinimumSize(800, 500)
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        self.bg_label = QLabel()
+        self.bg_label = QLabel(self)
         self.bg_label.setAlignment(Qt.AlignCenter)
-        self.bg_label.setStyleSheet("background-color: #000000;")
+        self.bg_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.bg_label.setScaledContents(False)
         root_layout.addWidget(self.bg_label)
 
-        overlay_layout = QVBoxLayout(self.bg_label)
-        overlay_layout.setContentsMargins(24, 24, 24, 24)
-        overlay_layout.setSpacing(10)
+        self.overlay_widget = QWidget(self.bg_label)
+        self.overlay_widget.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+        self.overlay_layout = QVBoxLayout(self.overlay_widget)
+        self.overlay_layout.setContentsMargins(24, 24, 24, 24)  # will be scaled in _apply_scale()
+        self.overlay_layout.setSpacing(0)
 
-        overlay_layout.addStretch()
+        self.overlay_layout.addStretch(1)
 
-        bottom_row = QHBoxLayout()
+        self.bottom_row = QHBoxLayout()
+        self.bottom_row.setContentsMargins(0, 0, 0, 0)
+        self.bottom_row.setSpacing(0)
 
-        self.welcome_text = QLabel("Welcome to the\nGlaucoma Detector")
-        self.welcome_text.setFont(QFont("Microsoft YaHei", 18, QFont.Bold))
-        self.welcome_text.setStyleSheet("color: white;")
-        bottom_row.addWidget(self.welcome_text)
+        self.welcome_text = QLabel(self.overlay_widget)
+        self.welcome_text.setTextFormat(Qt.RichText)
+        self.welcome_text.setWordWrap(True)
+        self.welcome_text.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
+        self.welcome_text.setStyleSheet("background: transparent;")
 
-        bottom_row.addStretch()
-
-        self.start_button = QPushButton("Let’s get started")
-        self.start_button.setMinimumHeight(40)
-        self.start_button.setFont(QFont("Microsoft YaHei", 10, QFont.Bold))
-        self.start_button.setStyleSheet(
-            "QPushButton {"
-            "  background-color: #4c6fff;"
-            "  color: white;"
-            "  border-radius: 20px;"
-            "  padding: 6px 20px;"
-            "}"
-            "QPushButton:hover {"
-            "  background-color: #3b59d4;"
-            "}"
-        )
+        self.start_button = QPushButton("Let's get started", self.overlay_widget)
+        self.start_button.setCursor(Qt.PointingHandCursor)
+        self.start_button.setFocusPolicy(Qt.NoFocus)
         self.start_button.clicked.connect(self.start_clicked.emit)
-        bottom_row.addWidget(self.start_button)
 
-        overlay_layout.addLayout(bottom_row)
+        self.bottom_row.addWidget(self.welcome_text, 0, Qt.AlignLeft | Qt.AlignBottom)
+        self.bottom_row.addStretch(1)
+        self.bottom_row.addWidget(self.start_button, 0, Qt.AlignRight | Qt.AlignBottom)
+
+        self.overlay_layout.addLayout(self.bottom_row)
+
+        self._apply_scale()
+        self._update_overlay_geometry()
         self.update_background()
 
+    def _scale_factor(self) -> float:
+        w = max(1, self.width())
+        h = max(1, self.height())
+        s = min(w / float(self.DESIGN_W), h / float(self.DESIGN_H))
+        return max(0.55, min(1.75, s))
+
+    def _apply_scale(self):
+        s = self._scale_factor()
+        self._scale = s
+
+        pad = int(round(32 * s))
+        self.overlay_layout.setContentsMargins(pad, pad, pad, pad)
+
+        fs1 = int(round(44 * s))   # "Welcome to the"
+        fs2 = int(round(68 * s))   # "GlaucoScan"
+        fs1 = max(18, min(88, fs1))
+        fs2 = max(26, min(120, fs2))
+
+        self.welcome_text.setText(
+            f"<div style='color:white; font-family:{FONT_FAMILY}; font-weight:700; line-height:1.05; font-size:{fs1}px;'>"
+            f"Welcome to the"
+            f"</div>"
+            f"<div style='color:white; font-family:{FONT_FAMILY}; font-weight:800; line-height:1.05; font-size:{fs2}px;'>"
+            f"GlaucoScan"
+            f"</div>"
+        )
+
+        btn_fs = int(round(22 * s))
+        btn_fs = max(12, min(40, btn_fs))
+        pv = int(round(10 * s))
+        ph = int(round(24 * s))
+        radius = int(round(16 * s))
+        radius = max(10, min(28, radius))
+
+        self.start_button.setStyleSheet(
+            "QPushButton {"
+            "  background-color: #4D6BFF;"
+            "  color: white;"
+            f"  font-size: {btn_fs}px;"
+            "  font-weight: 700;"
+            f"  padding: {pv}px {ph}px;"
+            f"  border-radius: {radius}px;"
+            "  border: none;"
+            "}"
+            "QPushButton:hover { background-color: #3F5CF5; }"
+            "QPushButton:pressed { background-color: #314FEA; }"
+        )
+
+    def _update_overlay_geometry(self):
+        if hasattr(self, "bg_label") and hasattr(self, "overlay_widget"):
+            self.overlay_widget.setGeometry(self.bg_label.rect())
+
     def update_background(self):
-        """Scales the background image to fit the current window size."""
-        if not self.bg_pixmap.isNull():
-            size = self.size()
-            if size.width() > 0 and size.height() > 0:
-                scaled = self.bg_pixmap.scaled(
-                    size,
-                    Qt.KeepAspectRatioByExpanding,
-                    Qt.SmoothTransformation
-                )
-                self.bg_label.setPixmap(scaled)
-                self.bg_label.setStyleSheet("")
-        else:
-            # Fallback text if background image is missing
-            self.bg_label.setText(
-                "Welcome to the GlaucoScan\n\n"
-                "(Background image not found. "
-                "Please place welcome.jpeg in the same folder.)"
-            )
-            self.bg_label.setStyleSheet(
-                "color: white; background-color: #2d3436;"
-            )
+        if self.bg_pixmap.isNull():
+            self.bg_label.setText("Welcome image not found")
+            self.bg_label.setAlignment(Qt.AlignCenter)
+            return
+
+        target = self.bg_label.size()
+        if target.width() <= 1 or target.height() <= 1:
+            return
+
+        dpr = self.devicePixelRatioF()
+        scaled = self.bg_pixmap.scaled(
+            int(target.width() * dpr),
+            int(target.height() * dpr),
+            Qt.KeepAspectRatioByExpanding,
+            Qt.SmoothTransformation,
+        )
+        scaled.setDevicePixelRatio(dpr)
+        self.bg_label.setPixmap(scaled)
+        self.bg_label.setAlignment(Qt.AlignCenter)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self._apply_scale()
+        self._update_overlay_geometry()
         self.update_background()
 
 
@@ -207,21 +254,21 @@ class AnalyzePage(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        #UI setup for analysis page
-        self.setMinimumSize(900, 600)
-
+        self.setMinimumSize(700, 500)
         palette = self.palette()
         palette.setColor(QPalette.Window, QColor("#f5f7fb"))
         self.setPalette(palette)
         self.setAutoFillBackground(True)
 
-        top_label = QLabel(
-            "Please add a retinal fundus image for inspection\n"
-            "(This demo uses optic disc segmentation (UNet)+ glaucoma classification (EfficientNet).)"
+        self.top_label = QLabel(
+            "Please drop one or more eye images for inspection\n"
+            "(This version currently supports selecting a single image "
+            "via the 'Add image' button below.)"
         )
-        top_label.setAlignment(Qt.AlignCenter)
-        top_label.setStyleSheet("color: #555555;")
-        top_label.setFont(QFont("Microsoft YaHei", 10))
+        self.top_label.setAlignment(Qt.AlignCenter)
+        self.top_label.setWordWrap(True)
+        self.top_label.setStyleSheet("color: #555555;")
+        self.top_label.setFont(QFont(FONT_FAMILY, 10))
 
         self.image_label = QLabel(
             "Drop area\n\nor click the 'Add image' button below"
@@ -245,7 +292,7 @@ class AnalyzePage(QWidget):
         )
 
         self.result_title = QLabel("Analysis result")
-        self.result_title.setFont(QFont("Microsoft YaHei", 12, QFont.Bold))
+        self.result_title.setFont(QFont(FONT_FAMILY, 12, QFont.Bold))
 
         self.result_label = QLabel("No image has been analyzed yet.")
         self.result_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -263,7 +310,7 @@ class AnalyzePage(QWidget):
             "of glaucoma."
         )
         self.hint_label.setWordWrap(True)
-        # Render the warning text in black as well
+        
         self.hint_label.setStyleSheet("color: black;")
 
         right_layout = QVBoxLayout()
@@ -305,7 +352,7 @@ class AnalyzePage(QWidget):
 
         self.analyze_button = QPushButton("Run analysis")
         self.analyze_button.setMinimumHeight(36)
-        self.analyze_button.setEnabled(False) # Disabled until an image is loaded
+        self.analyze_button.setEnabled(False)
         self.analyze_button.setStyleSheet(
             "QPushButton {"
             "  background-color: #4c6fff;"
@@ -335,9 +382,11 @@ class AnalyzePage(QWidget):
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(6)
-        root_layout.addWidget(top_label)
+        root_layout.addWidget(self.top_label)
         root_layout.addLayout(middle_layout)
         root_layout.addLayout(bottom_layout)
+
+        self.update_typography()
 
     def load_image(self):
         """Opens a file dialog, loads the selected image, and displays it."""
@@ -373,7 +422,6 @@ class AnalyzePage(QWidget):
 
         self.analyze_button.setEnabled(True) # Enable analysis button
         
-        # Update result label to prompt the user
         self.result_label.setText(
             f"Loaded image: {os.path.basename(file_path)}\n\n"
             "Click the \"Run analysis\" button on the right."
@@ -394,7 +442,6 @@ class AnalyzePage(QWidget):
         if target_size.width() <= 0 or target_size.height() <= 0:
             return
 
-        # Scale image while preserving aspect ratio
         scaled_pixmap = self.original_pixmap.scaled(
             target_size,
             Qt.KeepAspectRatio,
@@ -406,9 +453,33 @@ class AnalyzePage(QWidget):
             "border: 1px solid #dde0e7;"
         )
 
+    
+    def update_typography(self):
+        w = max(1, self.width())
+        h = max(1, self.height())
+        base = int(math.sqrt(w * h))  # scale with area (more consistent between normal/maximized)
+
+        top_size = max(8,  min(18, int(base * 0.014)))   # header instructions
+        title_size = max(10, min(24, int(base * 0.018))) # "Analysis result"
+        body_size = max(8,  min(18, int(base * 0.014)))  # result text / hints / drop area
+        btn_size = max(8,  min(16, int(base * 0.014)))
+        btn_h = max(30, int(base * 0.055))
+
+        self.top_label.setFont(QFont(FONT_FAMILY, top_size))
+        self.image_label.setFont(QFont(FONT_FAMILY, body_size))
+        self.result_title.setFont(QFont(FONT_FAMILY, title_size, QFont.Bold))
+        self.result_label.setFont(QFont(FONT_FAMILY, body_size))
+        self.hint_label.setFont(QFont(FONT_FAMILY, body_size))
+
+        self.load_button.setFont(QFont(FONT_FAMILY, btn_size, QFont.Bold))
+        self.analyze_button.setFont(QFont(FONT_FAMILY, btn_size, QFont.Bold))
+        self.load_button.setMinimumHeight(btn_h)
+        self.analyze_button.setMinimumHeight(btn_h)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update_image_display()
+        self.update_typography()
 
     def run_analysis(self):
         """
@@ -421,7 +492,6 @@ class AnalyzePage(QWidget):
             )
             return
 
-        # Disable button and show 'Analyzing...' message during computation
         self.analyze_button.setEnabled(False)
         self.result_label.setText("Analyzing... please wait.")
         self.result_label.setStyleSheet(
@@ -431,19 +501,16 @@ class AnalyzePage(QWidget):
         QApplication.processEvents() # Force GUI redraw
 
         try:
-            # Main prediction call
             result = glaucoma_predict_pipeline(self.current_image_path)
 
             if "error" in result:
                 self.result_label.setText("Error: " + result["error"])
-                # ... [Error styling]
                 self.result_label.setStyleSheet(
                     "color: black; background-color: #f8f9fc; "
                     "border-radius: 8px; padding: 10px;"
                 )
                 return
 
-            # Format and display successful result
             text = (
                 f"File name: {result['filename']}\n"
                 f"Predicted class: {result['predicted_class']}\n"
@@ -458,7 +525,6 @@ class AnalyzePage(QWidget):
             )
 
         except Exception as e:
-            # Handle unexpected exceptions during processing
             self.result_label.setText("Error occurred:\n" + str(e))
             self.result_label.setStyleSheet(
                 "color: black; background-color: #f8f9fc; "
@@ -469,11 +535,10 @@ class AnalyzePage(QWidget):
 
 
 class MainWindow(QMainWindow):
-    # Main window setup, holding the stacked widget for page switching
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("GlaucoScan")
+        self.setWindowTitle(APP_TITLE)
         self.resize(1000, 650)
 
         self.stack = QStackedWidget()
@@ -485,22 +550,20 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self.stack)
 
-        # Connect welcome button to switch to analysis page
         self.welcome_page.start_clicked.connect(
             lambda: self.stack.setCurrentWidget(self.analyze_page)
         )
 
 
-# =======================================================
-# main entry
-# =======================================================
 def main():
     app = QApplication(sys.argv)
+    app.setFont(QFont(FONT_FAMILY, 10))
+
     window = MainWindow()
-    window.showMaximized()
-    sys.exit(app.exec_())
+    window.show()
+    sys.exit(app.exec())
 
 
+# ---- Entry point ----
 if __name__ == "__main__":
     main()
-
