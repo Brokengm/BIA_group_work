@@ -216,9 +216,8 @@ class AnalyzePage(QWidget):
         self.setAutoFillBackground(True)
 
         top_label = QLabel(
-            "Please drop one or more eye images for inspection\n"
-            "(This version currently supports selecting a single image "
-            "via the 'Add image' button below.)"
+            "Please add a retinal fundus image for inspection\n"
+            "(This demo uses optic disc segmentation (UNet)+ glaucoma classification (EfficientNet).)"
         )
         top_label.setAlignment(Qt.AlignCenter)
         top_label.setStyleSheet("color: #555555;")
@@ -474,7 +473,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Glaucoma Detector")
+        self.setWindowTitle("GlaucoScan")
         self.resize(1000, 650)
 
         self.stack = QStackedWidget()
@@ -498,7 +497,7 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec_())
 
 
