@@ -5,7 +5,7 @@
 
 This project is a deep learning-based desktop application designed to assist in the preliminary inspection of **Fundus Camera Images** for signs of **Glaucoma**.
 
-It utilizes a two-stage computer vision pipeline:
+It utilizes a three-stage computer vision pipeline:
 
 1.  **Preprocessing:** This included background removal to eliminate black borders, contrast enhancement using gamma correction and other image augmentation.
 2.  **UNet Segmentation:** Accurately localizes and segments the optic disc and cup region.
@@ -86,6 +86,7 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
 
