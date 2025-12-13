@@ -186,7 +186,7 @@ class WelcomePage(QWidget):
         else:
             # Fallback text if background image is missing
             self.bg_label.setText(
-                "Welcome to the Glaucoma Detector\n\n"
+                "Welcome to the GlaucoScan\n\n"
                 "(Background image not found. "
                 "Please place welcome.jpeg in the same folder.)"
             )
@@ -503,3 +503,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
