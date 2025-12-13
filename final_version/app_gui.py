@@ -6,8 +6,8 @@ Run:
 
 Expected files (relative to this script):
   - welcome.jpeg
-  - model.py / preprocess.py / glaucoma_detector.py (depending on your pipeline)
-  - GUI/384_unet.pth, GUI/efficientnet.pth (or update paths in your model loader)
+  - model.py / preprocess.py
+  - 384_unet.pth, efficientnet.pth
 """
 
 # ---- Global UI constants ----
@@ -305,7 +305,7 @@ class AnalyzePage(QWidget):
         )
 
         self.hint_label = QLabel(
-            "⚠ This software is for course work and educational demonstration only. "
+            "This software is for course work and educational demonstration only. "
             "It must NOT be used for real medical diagnosis or self-assessment "
             "of glaucoma."
         )
