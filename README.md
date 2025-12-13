@@ -15,7 +15,8 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 
 ## 🚀 Features
 
-* **Three-Stage Pipeline:** Implements robust preprocessing and UNet segmentation to ensure the classification model focuses only on the critical optic disc region, maximizing diagnostic accuracy. * **High-Performance Backbone:** Utilizes a fine-tuned **EfficientNet-B3** network for fast and reliable feature extraction and classification.
+* **Two-Stage Preprocessing:** Implements robust preprocessing and UNet segmentation to ensure the classification model focuses only on the critical optic disc region, maximizing diagnostic accuracy.
+* **High-Performance Backbone:** Utilizes a fine-tuned **EfficientNet-B3** network for fast and reliable feature extraction and classification.
 * **Fundus Image Optimized:** The segmentation and preprocessing steps are specifically tailored for varying qualities and sizes of fundus camera images, effectively removing dark backgrounds and centering on the region of interest.
 * **Confidence Metrics:** Displays precise probability scores for both the "Glaucoma" and "Non-Glaucoma" categories.
 * **Clean Desktop UI:** A fully featured, self-contained desktop interface built with PyQt5, optimizing ease of use for local image analysis.
@@ -85,5 +86,6 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
