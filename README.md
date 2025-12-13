@@ -1,4 +1,4 @@
-# 👁️ Glaucoma Detection AI Assistant
+# 👁️ GlaucoScan
 
 
 ## Overview
@@ -81,5 +81,6 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 4.  **View Results:** The classification result, including the predicted class (`Glaucoma` or `Non-Glaucoma`) and the precise probability scores, will be displayed in the right panel.
 
 ## ⚠️ Disclaimer
+
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
