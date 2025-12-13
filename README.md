@@ -57,6 +57,7 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
     * `app_gui.py` Main application, GUI (PyQt5) logic, and prediction pipeline entry point.
     * `model.py` Contains UNet and CombinedModel (EfficientNet) class definitions and model loading logic.
     * `preprocess.py` Contains all image processing functions (cropping, CLAHE, segmentation, etc.).
+    * `welcome.jpeg` The picture of main page.
 
 ## 💡 Usage
 
@@ -84,4 +85,5 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
