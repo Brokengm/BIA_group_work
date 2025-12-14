@@ -91,11 +91,12 @@ Download [GlaucoScan.zip](https://github.com/Brokengm/BIA_group_work/blob/main/G
     * Glaucoma Classification (using EfficientNet-B3).
 4.  **View Results:** The classification result, including the predicted class (`Glaucoma` or `Non-Glaucoma`) and the precise probability scores, will be displayed in the right panel.
 
-*A visual walkthrough of these analysis steps is available in the **[Introduction Video](https://github.com/Brokengm/BIA_group_work/blob/main/introduction_video.mp4)**.
+*A visual walkthrough of these analysis steps is available in the **[Introduction Video](https://github.com/Brokengm/BIA_group_work/blob/main/introduction_video.mp4)**.*
 
 ## ⚠️ Disclaimer
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
