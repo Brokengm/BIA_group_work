@@ -25,7 +25,7 @@ import scipy.io as sio
 
 """
 
-# --- 1. UNet 类定义 ---
+# code tested in notebook
 class UNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=1, init_features=32):
         super(UNet, self).__init__()
@@ -109,11 +109,7 @@ class UNet(nn.Module):
         logits = self.conv(dec1)
         return self.sigmoid(logits)
 
-# --- 2. 图像预处理函数 ---
 def get_bounding_box(binary_mask):
-    """
-    获取二值掩码中最大连通区域的边界框。
-    """
     binary = binary_mask > 0
     if not np.any(binary):
         height, width = binary_mask.shape
@@ -127,14 +123,12 @@ def get_bounding_box(binary_mask):
 
 
 def gamma_correct(img, gamma=0.4):
-    """Gamma 校正：提亮暗区细节"""
     img_float = util.img_as_float(img)
     corrected = exposure.adjust_gamma(img_float, gamma=gamma)
     return util.img_as_ubyte(corrected)
 
 
 def enhance_contrast_clahe(image, clip_limit=0.02, kernel_size=8):
-    """CLAHE 局部对比度增强"""
     img_float = util.img_as_float(image)
     enhanced = exposure.equalize_adapthist(
         img_float,
@@ -145,9 +139,6 @@ def enhance_contrast_clahe(image, clip_limit=0.02, kernel_size=8):
 
 
 def segment_optic_disc_from_mat(image_path, mat_dir):
-    """
-    直接从与图像同名的 .mat 文件中读取视盘标注。
-    """
     image_stem = Path(image_path).stem
     mat_path = os.path.join(mat_dir, f"{image_stem}.mat")
     mat_data = sio.loadmat(mat_path)
@@ -157,9 +148,6 @@ def segment_optic_disc_from_mat(image_path, mat_dir):
 
 
 def segment_optic_disc_by_clustering(gray_image):
-    """
-    使用 KMeans 分割视盘区域。
-    """
     pixel_values = gray_image.reshape(-1, 1).astype(np.float32)
     kmeans = KMeans(n_clusters=6, n_init=3, random_state=0).fit(pixel_values)
     cluster_labels = kmeans.labels_.reshape(gray_image.shape)
@@ -174,16 +162,12 @@ def segment_optic_disc_by_clustering(gray_image):
 
 
 def segment_optic_disc_with_unet(image_path, unet_model):
-    """
-    使用 UNet 模型分割视盘区域。
-    """
     pil_image = Image.open(image_path).convert('RGB')
     original_img = np.array(pil_image)
 
     img_tensor = util.img_as_float(original_img)
     img_tensor = resize(img_tensor, (384, 384), anti_aliasing=True)
     img_tensor = torch.FloatTensor(img_tensor).permute(2, 0, 1).unsqueeze(0)
-    # 从模型对象获取其所在的设备
     model_device = next(unet_model.parameters()).device
     img_tensor = img_tensor.to(model_device)
 
@@ -199,9 +183,6 @@ def segment_optic_disc_with_unet(image_path, unet_model):
 
 
 def crop_fundus_region(original_image, threshold=10):
-    """
-    裁剪眼底有效区域（去除黑边/无效区域）。
-    """
     if original_image.ndim == 2:
         original_image = np.stack([original_image] * 3, axis=-1)
 
@@ -229,7 +210,6 @@ def crop_fundus_region(original_image, threshold=10):
 
 
 def refine_mask_with_morphology(binary_mask):
-    """通过形态学操作（开+闭）精修二值掩码"""
     binary = binary_mask > 0
     opened = binary_opening(binary, footprint=square(5))
     closed = binary_closing(opened, footprint=square(5))
@@ -237,9 +217,6 @@ def refine_mask_with_morphology(binary_mask):
 
 
 def crop_optic_disc_region(rgb_image, optic_disc_mask):
-    """
-    基于视盘掩码裁剪出包含视盘的局部区域，并缩放到 384x384。
-    """
     min_col, min_row, width, height = get_bounding_box(optic_disc_mask)
 
     scale_x = rgb_image.shape[1] / optic_disc_mask.shape[1]
@@ -252,7 +229,7 @@ def crop_optic_disc_region(rgb_image, optic_disc_mask):
     center_x = min_col + width // 2
     center_y = min_row + height // 2
 
-    half_crop_size = 250  # 裁剪 500x500 区域
+    half_crop_size = 250 
     col_start = max(0, center_x - half_crop_size)
     row_start = max(0, center_y - half_crop_size)
     col_end = min(rgb_image.shape[1], center_x + half_crop_size)
@@ -272,9 +249,6 @@ def crop_optic_disc_region(rgb_image, optic_disc_mask):
 
 
 def preprocess_fundus_image(image_path, mat_dir=None, method='unet', unet_model=None, debug=False):
-    """
-    端到端预处理：输入原始眼底图，输出视盘裁剪图。
-    """
     pil_image = Image.open(image_path).convert("RGB")
     original_image = np.array(pil_image)
 
@@ -311,11 +285,7 @@ def preprocess_fundus_image(image_path, mat_dir=None, method='unet', unet_model=
     else:
         return final_crop
 
-# --- 4. 定义加载模型的函数 ---
 def load_model(model_class, model_save_path, in_channels=3, out_channels=1, device=None):
-    """
-    加载训练好的 PyTorch 模型。
-    """
     if device is None:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"use devide: {device}")
@@ -336,7 +306,6 @@ def load_model(model_class, model_save_path, in_channels=3, out_channels=1, devi
     print(f"model loaded")
     return model
 
-# --- 5. 批量预处理函数 ---
 def batch_preprocess_images(
     input_directory,
     output_directory,
@@ -345,9 +314,6 @@ def batch_preprocess_images(
     image_extension="*.jpg",
     save_quality=95
 ):
-    """
-    批量预处理眼底图像（支持 UNet、聚类、MAT 等方法）
-    """
     os.makedirs(output_directory, exist_ok=True)
     print(f"output directory exists: {output_directory}")
 
@@ -379,50 +345,31 @@ def preprocess_single_image(
     method: str = 'unet',
     unet_model=None,
     output_directory: str = None,
-    save_quality: int = 95 # 控制 JPG 质量
+    save_quality: int = 95
 ) -> np.ndarray:
-    """
-    对单张眼底图像进行预处理（例如：UNet分割后裁剪）。
 
-    Args:
-        image_path (str): 待处理图片的完整路径。
-        method (str): 预处理方法 ('unet' 等)。
-        unet_model: 已加载的 UNet 模型实例 (如果 method='unet')。
-        output_directory (str, optional): 如果提供，处理后的图像将保存到此目录。
-        save_quality (int): JPEG 保存质量 (1-95)，仅对 JPG 有效。
-
-    Returns:
-        np.ndarray: 经过裁剪和缩放后的局部图像 NumPy 数组 (384x384x3)。
-    """
-
-    # 假设 preprocess_fundus_image 已经定义并可用
     final_crop = preprocess_fundus_image(
         image_path=image_path,
         method=method,
         unet_model=unet_model if method == 'unet' else None
     )
 
-    # ----------------------------------------------------
-    # 2. 文件保存（可选，并强制使用 JPG 格式）
-    # ----------------------------------------------------
+
     if output_directory:
-        # 确保输出目录存在
         os.makedirs(output_directory, exist_ok=True)
 
-        # 构造输出路径：确保文件名后缀为 .jpg
         output_filename = Path(image_path).parts[-1]
         output_path = os.path.join(output_directory, output_filename)
 
-        # 转换为 PIL 图像
         img_to_save = Image.fromarray(final_crop)
 
         try:
             img_to_save.save(output_path, format='JPEG', quality=save_quality)
-            print(f"✅ 处理结果已保存为 JPG 文件 (Quality={save_quality}) 至: {output_path}")
+            print(f"Saved as a JPG file (Quality={save_quality}) to: {output_path}")
         except Exception as e:
-            print(f"❌ 保存 JPG 文件时出错: {e}")
+            print(f"Error when saving: {e}")
 
-"""# Efficientnet Model: Prediction"""
+# Efficientnet Model: Prediction
 
 import torch
 from torch import nn
@@ -431,14 +378,10 @@ import timm
 class CombinedModel(nn.Module):
     def __init__(self):
         super().__init__()
-        # 使用 EfficientNet-b0
         self.cnn_model = timm.create_model('efficientnet_b3', pretrained=True, num_classes=0)
-        # num_classes=0 会移除最后的分类层，直接输出特征
 
         num_features = self.cnn_model.num_features
 
-        # 将高维的 EfficientNet 特征降维到 30，以匹配您之前的架构设计。
-        # 加入了 ReLU 和 Dropout 以增加非线性和防止过拟合。
         self.cnn_projection = nn.Sequential(
             nn.Linear(num_features, 512),
             nn.ReLU(),
@@ -469,50 +412,40 @@ from pathlib import Path
 from tqdm import tqdm
 
 
-# 您的模型权重文件路径
+# model weights
 EFFICIENTNET_WEIGHTS_PATH = '/mnt/best_fold_4.pth'
-# 模型的类别名称
 CLASS_NAMES = ['Non-Glaucoma', 'Glaucoma']
-# 模型训练时的归一化参数
+
 NORM_MEAN = [0.485, 0.456, 0.406]
 NORM_STD = [0.229, 0.224, 0.225]
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# ----------------------------------------------------
-# 💡 模型加载器 (确保模型只加载一次)
-# ----------------------------------------------------
 model_instance = None
 
 def get_loaded_model():
     """
-    懒加载 (Lazy Load) EfficientNet 模型实例。
+    Lazy Load EfficientNet
     """
     global model_instance
     if model_instance is None:
-        print(f"1. 🚀 首次加载 EfficientNet 模型...")
-
-        # 初始化模型 (假设 CombinedModel3_Optimized 是正确的类名)
+        print(f"First time loading EfficientNet...")
+        
         model = CombinedModel().to(DEVICE)
 
         try:
-            # 加载权重
             model.load_state_dict(torch.load(EFFICIENTNET_WEIGHTS_PATH, map_location=DEVICE))
-            model.eval() # 切换到评估模式
+            model.eval()
             model_instance = model
-            print("   ✅ 模型加载成功。")
+            print("Successfully loaded.")
         except Exception as e:
-            print(f"   ❌ 模型权重加载失败，请检查路径和类定义: {e}")
-            raise RuntimeError(f"无法加载模型: {e}")
+            print(f"Model weights loading failed. Please check the path and class definition: {e}")
+            raise RuntimeError(f"Failed to load model: {e}")
 
     return model_instance
 
-# =======================================================
-# 1. 批量图片预测函数 (多图片输入)
-# =======================================================
-
 class InferenceDataset(Dataset):
-    """用于批量推理的 Dataset，只读取图片路径。"""
+    """The Dataset used for batch inference only reads the image paths."""
     def __init__(self, file_paths: list, transform):
         self.file_paths = file_paths
         self.transform = transform
@@ -529,31 +462,29 @@ class InferenceDataset(Dataset):
 
 def predict_multiple_images(file_paths: list, batch_size: int = 16) -> pd.DataFrame:
     """
-    对多张 U-Net 裁剪后的图片进行批量预测。
-
+    Perform batch predictions on multiple U-Net cropped images. 
+    
     Args:
-        file_paths (list): 待预测图片文件的完整路径列表。
-        batch_size (int): 批次大小。
-
+        file_paths (list): The complete paths of the images to be predicted.
+        batch_size (int): Batch size. 
+        
     Returns:
-        pd.DataFrame: 包含文件名、预测类别和概率的结果表格。
+        pd.DataFrame: A table containing the file names, predicted categories, and probabilities.
     """
     if not file_paths:
         return pd.DataFrame()
 
     model = get_loaded_model()
 
-    # 2. 定义推理变换 (与训练时保持一致)
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(NORM_MEAN, NORM_STD)
     ])
 
-    # 3. 创建 DataLoader
     dataset = InferenceDataset(file_paths, transform)
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
-    # 4. 执行预测
+    # do prediction
     all_results = []
 
     with torch.no_grad():
@@ -563,7 +494,7 @@ def predict_multiple_images(file_paths: list, batch_size: int = 16) -> pd.DataFr
             probabilities = torch.softmax(outputs, dim=1).cpu().numpy()
             predicted_indices = np.argmax(probabilities, axis=1)
 
-            # 5. 收集结果
+            # collect results
             for i, name in enumerate(img_names):
                 pred_index = predicted_indices[i]
 
@@ -578,19 +509,14 @@ def predict_multiple_images(file_paths: list, batch_size: int = 16) -> pd.DataFr
 
     return pd.DataFrame(all_results)
 
-# =======================================================
-# 2. 单张图片预测函数
-# =======================================================
-
 def predict_single_image(image_path: str) -> dict:
     """
-    对单张 U-Net 裁剪后的图片进行预测。
+    Make predictions on the cropped images of a single U-Net. 
 
     Args:
-        image_path (str): 待预测图片的完整路径。
-
+        image_path (str): The complete path of the image to be predicted. 
     Returns:
-        dict: 包含文件名、预测类别和概率的结果字典。
+        dict: A dictionary containing the file name, predicted category and probability.
     """
     if not os.path.exists(image_path):
         return {'error': f"file not found: {image_path}"}
@@ -607,13 +533,13 @@ def predict_single_image(image_path: str) -> dict:
         image_tensor = transform(image).unsqueeze(0).to(DEVICE) # (1, C, H, W)
 
     except Exception as e:
-        return {'filename': Path(image_path).name, 'error': f"图片加载或预处理失败: {e}"}
+        return {'filename': Path(image_path).name, 'error': f"Image loading or preprocessing failed: {e}"}
 
-    # 4. 执行预测
+    # conduct prediction
     with torch.no_grad():
         outputs = model(image_tensor)
 
-    # 5. 结果解析
+    # result analyzation
     probabilities = torch.softmax(outputs, dim=1).cpu().squeeze().numpy()
     predicted_index = np.argmax(probabilities)
 
@@ -648,20 +574,20 @@ preprocess_single_image(
     method='unet',
     unet_model=unet_model,
     output_directory= '/mnt/output',
-    save_quality=95 # 控制 JPG 质量
+    save_quality=95 
 )
 
-# 示例单图路径
+# example path for a single image
 SINGLE_IMAGE_PATH_EXAMPLE = '/mnt/33.jpg'
-# 示例多图路径
+# example path for a batch
 MULTIPLE_IMAGE_PATHS_EXAMPLE = [
     'path/to/your/Unet_Cropped_Dataset/sample_001.jpg',
     'path/to/your/Unet_Cropped_Dataset/sample_002.jpg',
     'path/to/your/Unet_Cropped_Dataset/sample_003.jpg',
 ]
 
-# --- 示例 1: 单张图片预测 ---
-print("\n--- 示例 1: 单张图片预测 ---")
+# single image
+print("\n Single image prediction")
 single_result = predict_single_image(SINGLE_IMAGE_PATH_EXAMPLE)
 print(single_result)
 
