@@ -80,7 +80,7 @@ python app_gui.py
 
 Download [GlaucoScan.zip](https://github.com/Brokengm/BIA_group_work/blob/main/GlaucoScan.zip), and decompress it to run the software immediately.
 
-### Analysis Steps
+## Analysis Steps
 
 1.  **Welcome Screen:** Click **"Let's get started"**.
 2.  **Load Image:** Click the **"Add image"** button to select a fundus image (`.jpg`, `.png`, etc.). The image will appear in the left panel.
@@ -97,6 +97,7 @@ Download [GlaucoScan.zip](https://github.com/Brokengm/BIA_group_work/blob/main/G
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
 
