@@ -1,11 +1,10 @@
 import sys
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"   # 允许 OpenMP 多库并存
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE" 
 import warnings
 
 warnings.filterwarnings("ignore")
 
-# ----------------- 第 1 部分：通用 & 深度学习依赖 -----------------
 import numpy as np
 from pathlib import Path
 
@@ -22,7 +21,6 @@ from skimage.transform import resize
 from skimage.measure import label, regionprops
 from skimage.morphology import binary_opening, binary_closing, square
 
-# ----------------- 第 2 部分：PyQt5 GUI 依赖 -----------------
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QLabel, QPushButton, QFileDialog,
@@ -33,9 +31,9 @@ from PyQt5.QtGui import QPixmap, QFont, QPalette, QColor
 from PyQt5.QtCore import Qt, pyqtSignal
 
 
-# =======================================================
-# 基本路径和常量
-# =======================================================
+
+# Basic paths
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 UNET_WEIGHTS_PATH = os.path.join(BASE_DIR, "384_unet.pth")
@@ -51,24 +49,20 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"[INFO] Using device: {DEVICE}")
 
 
-# =======================================================
-# 小工具：兼容 PyTorch 2.6 的安全加载函数
-# =======================================================
 def safe_torch_load(path, map_location=None):
     """
-    优先使用 weights_only=False（解决 PyTorch 2.6 的默认更改问题），
-    如果旧版本 torch 不支持该参数，则退回到普通 torch.load。
+    Mostly, if the content is repetitive with another file, weights_only=False should be used (to address the default change issue in PyTorch 2.6).
+    If the old version of torch does not support this parameter, it will fall back to the regular torch.load.
     """
     try:
         return torch.load(path, map_location=map_location, weights_only=False)
     except TypeError:
-        # 老版本 torch 没有 weights_only 参数
+        # Old version of  torch has no weights_only
         return torch.load(path, map_location=map_location)
 
 
-# =======================================================
-# 第 3 部分：UNet 分割模型
-# =======================================================
+# UNet segmentation model
+
 class UNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=1, init_features=32):
         super(UNet, self).__init__()
@@ -152,10 +146,8 @@ class UNet(nn.Module):
         logits = self.conv(dec1)
         return self.sigmoid(logits)
 
+# Functions of image preprocessing
 
-# =======================================================
-# 第 4 部分：一些图像处理函数
-# =======================================================
 def get_bounding_box(binary_mask):
     binary = binary_mask > 0
     if not np.any(binary):
@@ -253,7 +245,7 @@ def crop_optic_disc_region(rgb_image, optic_disc_mask):
     center_x = min_col + width // 2
     center_y = min_row + height // 2
 
-    half_crop_size = 250  # 裁剪 500x500 区域
+    half_crop_size = 250 
     col_start = max(0, center_x - half_crop_size)
     row_start = max(0, center_y - half_crop_size)
     col_end = min(rgb_image.shape[1], center_x + half_crop_size)
@@ -272,9 +264,6 @@ def crop_optic_disc_region(rgb_image, optic_disc_mask):
 
 
 def preprocess_fundus_image(image_path, unet_model, debug=False):
-    """
-    端到端预处理：输入原始眼底图，输出 384x384 视盘区域图像
-    """
     pil_image = Image.open(image_path).convert("RGB")
     original_image = np.array(pil_image)
 
@@ -300,9 +289,8 @@ def preprocess_fundus_image(image_path, unet_model, debug=False):
         return final_crop
 
 
-# =======================================================
-# 第 5 部分：分类模型（EfficientNet-B3 + 全连接头）
-# =======================================================
+# Efficient-B3-based classification model
+
 class CombinedModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -341,12 +329,11 @@ def get_unet_model():
     global _unet_instance
     if _unet_instance is None:
         if not os.path.exists(UNET_WEIGHTS_PATH):
-            raise FileNotFoundError(f"UNet 权重文件不存在: {UNET_WEIGHTS_PATH}")
+            raise FileNotFoundError(f"UNet weights file not found: {UNET_WEIGHTS_PATH}")
 
         model = UNet(in_channels=3, out_channels=1).to(DEVICE)
         model.eval()
 
-        # ✅ 使用安全加载函数，解决 PyTorch 2.6 weights_only 问题
         checkpoint = safe_torch_load(UNET_WEIGHTS_PATH, map_location=DEVICE)
         if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
             state = checkpoint["model_state_dict"]
@@ -355,7 +342,7 @@ def get_unet_model():
         model.load_state_dict(state)
 
         _unet_instance = model
-        print("[INFO] UNet 模型加载成功")
+        print("[INFO] UNet model successfully loaded.")
 
     return _unet_instance
 
@@ -364,12 +351,11 @@ def get_effnet_model():
     global _effnet_instance
     if _effnet_instance is None:
         if not os.path.exists(EFFICIENTNET_WEIGHTS_PATH):
-            raise FileNotFoundError(f"EfficientNet 权重文件不存在: {EFFICIENTNET_WEIGHTS_PATH}")
+            raise FileNotFoundError(f"EfficientNet weights file not found: {EFFICIENTNET_WEIGHTS_PATH}")
 
         model = CombinedModel().to(DEVICE)
         model.eval()
 
-        # ✅ 同样使用安全加载函数
         checkpoint = safe_torch_load(EFFICIENTNET_WEIGHTS_PATH, map_location=DEVICE)
         if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
             state = checkpoint["model_state_dict"]
@@ -378,18 +364,17 @@ def get_effnet_model():
         model.load_state_dict(state)
 
         _effnet_instance = model
-        print("[INFO] EfficientNet 模型加载成功")
+        print("[INFO] EfficientNet model successfully loaded.")
 
     return _effnet_instance
 
 
-# =======================================================
-# 第 6 部分：推理接口
-# =======================================================
+
+# Prediction
+
 def predict_single_cropped_image_array(img_array: np.ndarray) -> dict:
     """
-    输入：已经裁剪好的 384x384x3 numpy 数组
-    输出：预测结果 dict
+    Compute prediction results
     """
     model = get_effnet_model()
 
@@ -418,9 +403,9 @@ def predict_single_cropped_image_array(img_array: np.ndarray) -> dict:
 
 def glaucoma_predict_pipeline(image_path: str) -> dict:
     """
-    对外暴露的主函数：给 GUI 调用
-    输入：原始眼底图路径
-    输出：包含预测结果和概率的 dict
+    The main function exposed externally: called by the GUI
+    Input: Path of the original fundus image
+    Output: A dictionary containing the prediction results and probabilities
     """
     if not os.path.exists(image_path):
         return {'error': f"file not found: {image_path}"}
@@ -434,9 +419,7 @@ def glaucoma_predict_pipeline(image_path: str) -> dict:
     return cls_result
 
 
-# =======================================================
-# 第 7 部分：GUI —— 欢迎页 + 分析页 + 主窗口
-# =======================================================
+# GUI
 class WelcomePage(QWidget):
     start_clicked = pyqtSignal()
 
@@ -578,7 +561,7 @@ class AnalyzePage(QWidget):
         )
 
         self.hint_label = QLabel(
-            "⚠ This software is for course work and educational demonstration only. "
+            "This software is for course work and educational demonstration only. "
             "It must NOT be used for real medical diagnosis or self-assessment "
             "of glaucoma."
         )
@@ -725,13 +708,8 @@ class AnalyzePage(QWidget):
         super().resizeEvent(event)
         self.update_image_display()
 
+    # real analysis process
     def run_analysis(self):
-        """
-        使用真正的模型进行青光眼检测
-        - 不再显示 demo 文本
-        - 不再用颜色区分风险等级
-        - 结果全部黑字
-        """
         if self.current_image_path is None:
             QMessageBox.information(
                 self, "Info", "Please add an image first."
@@ -772,7 +750,6 @@ class AnalyzePage(QWidget):
 
         except Exception as e:
             msg = str(e)
-            # 把 weights_only 相关的长说明压缩成一句话
             if "Weights only load failed" in msg:
                 msg = (
                     "Model weights could not be loaded. "
@@ -809,9 +786,7 @@ class MainWindow(QMainWindow):
         )
 
 
-# =======================================================
-# main 入口
-# =======================================================
+# main function
 def main():
     app = QApplication(sys.argv)
     window = MainWindow()
