@@ -37,7 +37,7 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
     cd final_version
     ```
 
-2.  **Create and activate the environment (recommended):**
+2.  **Create and activate the environment (recommend conda,if you don't have conda, you can search installation guidance online):**
     ```bash
     # Using conda
     conda create -n glaucoma python=3.9
@@ -90,6 +90,7 @@ Just download GlaucoScan.zip, and decompress.
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
 
