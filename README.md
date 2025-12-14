@@ -12,9 +12,9 @@ This project is a deep learning-based application designed to assist in the prel
 
 ## Features
 
-* **Targeted Diagnostic Focus:** Combines robust preprocessing and UNet segmentation to ensure the classifier focuses exclusively on the critical optic disc region, maximizing diagnostic accuracy.
-* **High-Performance Backbone:** Employs a fine-tuned EfficientNet-B3 model to achieve reliable and efficient feature extraction for binary glaucoma classification.
-* **Fundus Image–Optimized Processing:** The pipeline is custom-tailored to neutralize the visual noise (dark backgrounds, contrast variation) inherent in diverse clinical fundus images.
+* **Targeted Diagnostic Focus:** Combines robust **preprocessing and UNet segmentation** to ensure the classifier focuses exclusively on the critical optic disc region, maximizing diagnostic accuracy.
+* **High-Performance Backbone:** Employs a fine-tuned **EfficientNet-B3 model** to achieve reliable and efficient feature extraction for binary glaucoma classification.
+* **Fundus Image–Optimized Processing:** The pipeline is custom-tailored to neutralize the visual noise (dark backgrounds, contrast variation) inherent in **diverse clinical fundus images**.
 * **End-to-End Automated Workflow:** Provides a fully integrated pipeline from image input to prediction output, minimizing manual intervention.
 * **User-Oriented Graphical Interface:** Offers an intuitive GUI that allows non-technical users to perform glaucoma analysis with minimal effort.
 
@@ -97,6 +97,7 @@ Download [GlaucoScan.zip](https://github.com/Brokengm/BIA_group_work/blob/main/G
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
 
