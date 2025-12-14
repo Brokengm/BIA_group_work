@@ -21,8 +21,9 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 * **Confidence Metrics:** Displays precise probability scores for both the "Glaucoma" and "Non-Glaucoma" categories.
 * **Clean Desktop UI:** A fully featured, self-contained desktop interface built with PyQt5, optimizing ease of use for local image analysis.
 
-## 🛠️ Installation and Setup
-
+## 🛠️ Installation and Setup  
+### Here we provide two ways: python scripts and software
+### For python script
 ### Prerequisites
 
 * Python 3.8+
@@ -60,6 +61,9 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
     * `preprocess.py` Contains all image processing functions (cropping, CLAHE, segmentation, etc.).
     * `welcome.jpeg` The picture of main page.
 
+### If your system is MacOS, you can try our software
+Just download GlaucoScan.zip, and decompress.
+
 ## 💡 Usage
 
 ### Running the Application
@@ -86,6 +90,7 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
 
