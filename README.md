@@ -15,14 +15,14 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 
 ## 🚀 Features
 
-* **Two-Stage Preprocessing:** Implements robust preprocessing and UNet segmentation to ensure the classification model focuses only on the critical optic disc region, maximizing diagnostic accuracy.
+* **Targeted Diagnostic Focus:** Automatic, accurate UNet segmentation isolates the optic disc and cup, directing the classifier's attention solely to the critical region for maximum diagnostic reliability.
 * **High-Performance Backbone:** Utilizes a fine-tuned **EfficientNet-B3** network for fast and reliable feature extraction and classification.
-* **Fundus Image Optimized:** The segmentation and preprocessing steps are specifically tailored for varying qualities and sizes of fundus camera images, effectively removing dark backgrounds and centering on the region of interest.
+* **Optimized for Fundus Imagery:** The pipeline is custom-tailored to neutralize the visual noise (dark backgrounds, contrast variation) inherent in diverse clinical fundus images.
 * **Confidence Metrics:** Displays precise probability scores for both the "Glaucoma" and "Non-Glaucoma" categories.
 * **Clean Desktop UI:** A fully featured, self-contained desktop interface built with PyQt5, optimizing ease of use for local image analysis.
 
 ## 🛠️ Installation and Setup  
-### Here we provide two ways: python scripts and software
+Here we provide two ways: python scripts and software
 ### For python scripts
 ### Prerequisites
 
@@ -90,6 +90,7 @@ Just download GlaucoScan.zip, and decompress.
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
 
