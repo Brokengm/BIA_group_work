@@ -23,7 +23,7 @@ The system is built using **PyTorch** and deployed with a user-friendly **PyQt5 
 
 ## 🛠️ Installation and Setup  
 ### Here we provide two ways: python scripts and software
-### For python script
+### For python scripts
 ### Prerequisites
 
 * Python 3.8+
@@ -90,6 +90,7 @@ Just download GlaucoScan.zip, and decompress.
 
 
 **This software is intended for course work and educational demonstration only. It must NOT be used for real medical diagnosis or self-assessment of glaucoma.** Always consult a qualified medical professional for health concerns.
+
 
 
 
